@@ -1,0 +1,333 @@
+---
+title: "Vulnerabilidad Territorial en Asentamientos Irregulares de Humedales Periurbanos de Maullín"
+author: "Tabita Garrido"
+format:
+  html:
+    embed-resources: true
+    self-contained: true
+bibliography: Referencias.bib
+csl: apa.csl
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup, include=FALSE}
+pacman::p_load(
+  readxl, dplyr, tidyr, ggplot2, knitr,
+  corrplot, texreg, ggeffects, lmtest
+)
+
+# Cargar datos procesados desde Preparacion.R
+load("output/datos_proc.RData")
+# proc_data = localidades_humedal con IVSP e ivsp_alto
+```
+
+# 1. Introducción
+
+Los asentamientos periurbanos que colindan con el Santuario de la Naturaleza Humedales del Río Maullín concentran condiciones habitacionales críticas que representan un problema de salud pública, contaminación ambiental y desigualdad territorial. Según datos del Censo de Población y Vivienda 2024 [@ine2024], una proporción significativa de las viviendas de estas localidades elimina sus aguas servidas mediante fosas sépticas instaladas en terrenos de baja permeabilidad, constituyendo un vector de contaminación directa sobre el cuerpo de agua.
+
+Desde una perspectiva sociológica, este fenómeno no puede reducirse a un problema técnico de saneamiento. Como señala @harvey2008, el acceso diferenciado a infraestructura básica es una expresión de desigualdades estructurales en el ejercicio del derecho a la ciudad: las poblaciones que habitan territorios periurbanos no consolidados enfrentan condiciones de privación que el mercado y el Estado reproducen sistemáticamente [@lefebvre1968]. En este sentido, la vulnerabilidad sanitaria es también una forma de exclusión social territorial [@jimenez2014].
+
+@rodriguez2019 documentan que los déficits de saneamiento se intensifican en territorios periurbanos donde la expansión residencial informal antecede a la provisión de infraestructura. A nivel metodológico, el Ministerio de Desarrollo Social ha operacionalizado estas brechas mediante el SIVUST [@mideso2020], marco que orienta la construcción del índice utilizado en este trabajo.
+
+**Pregunta de investigación:** ¿En qué medida las localidades periurbanas del área de influencia del Humedal Río Maullín presentan condiciones diferenciadas de vulnerabilidad sanitaria medibles a través del CPV 2024, y cómo se asocian estas condiciones entre sí?
+
+**Hipótesis:** Las localidades con mayores déficits de saneamiento presentan simultáneamente mayores niveles de dependencia demográfica y precariedad material, configurando un perfil multidimensional de vulnerabilidad sintetizable en un índice compuesto que puede ser predicho mediante regresión.
+
+**Fuente de datos:** Censo de Población y Vivienda 2024, INE Chile — Base de datos de localidades, Comuna de Maullín, Región de Los Lagos [@ine2024].
+
+---
+
+# 2. Análisis descriptivo
+
+## 2.1 Variables seleccionadas
+
+Las variables se seleccionaron a partir de su coherencia con la pregunta de investigación y disponibilidad en el CPV 2024. La unidad de análisis es la **localidad** (n = `r nrow(proc_data)` localidades periurbanas del humedal).
+
+| Variable | Nombre en base | Nivel de medición | Descripción |
+|---|---|---|---|
+| Localidad | `LOCALIDAD` | **Nominal** | Nombre de la unidad territorial |
+| % Fosa séptica | `prop_fosa` | **Razón** | Proporción de viviendas con fosa séptica |
+| % Agua de pozo | `prop_agua_pozo` | **Razón** | Proporción de viviendas abastecidas por pozo |
+| % Adultos mayores +60 | `prop_adulto_mayor` | **Razón** | Proporción de personas de 60 años o más |
+| % Discapacidad | `prop_discapacidad` | **Razón** | Proporción de personas con discapacidad |
+| % Mediagua | `prop_mediagua` | **Razón** | Proporción de viviendas tipo mediagua |
+| Riesgo sanitario | Derivada | **Ordinal** | Clasificación Bajo / Medio / Alto según déficit total |
+| Tipo servicio higiénico | Derivada | **Nominal** | Categoría predominante de eliminación de aguas servidas |
+| IVSP | Derivada | **Razón** | Índice 0–100 de vulnerabilidad sanitaria periurbana |
+| IVSP alto/bajo | Derivada | **Nominal dicotómica** | 1 si IVSP ≥ mediana, 0 si no |
+
+## 2.2 Estadísticos descriptivos
+
+```{r tabla-descriptivos}
+resumen <- proc_data %>%
+  select(
+    `Fosa séptica` = prop_fosa,
+    `Agua pozo`    = prop_agua_pozo,
+    `Adultos may.` = prop_adulto_mayor,
+    `Discapacidad` = prop_discapacidad,
+    `Mediagua`     = prop_mediagua,
+    `IVSP`         = ivsp
+  ) %>%
+  pivot_longer(everything(), names_to = "Variable", values_to = "valor") %>%
+  group_by(Variable) %>%
+  summarise(
+    Media   = round(mean(valor, na.rm = TRUE), 3),
+    Mediana = round(median(valor, na.rm = TRUE), 3),
+    DS      = round(sd(valor, na.rm = TRUE), 3),
+    Mín     = round(min(valor, na.rm = TRUE), 3),
+    Máx     = round(max(valor, na.rm = TRUE), 3),
+    .groups = "drop"
+  )
+
+kable(resumen,
+      caption = "Tabla 1. Estadísticos descriptivos — Localidades humedal Río Maullín (CPV 2024)")
+```
+
+## 2.3 Distribución del riesgo sanitario
+
+```{r tabla-frecuencias}
+kable(
+  data.frame(
+    Nivel      = c("Bajo", "Medio", "Alto"),
+    Frecuencia = as.numeric(table(proc_data$riesgo_sanitario))
+  ),
+  caption = "Tabla 2. Frecuencia de riesgo sanitario — localidades del humedal (CPV 2024)"
+)
+```
+
+```{r fig-riesgo, fig.cap="Figura 1. Distribución del riesgo sanitario por localidad. Fuente: CPV 2024, INE.", fig.width=6, fig.height=4}
+ggplot(proc_data, aes(x = riesgo_sanitario, fill = riesgo_sanitario)) +
+  geom_bar() +
+  scale_fill_manual(values = c("Bajo" = "#2D7A4F", "Medio" = "#E8A020", "Alto" = "#C0392B")) +
+  labs(title = "Nivel de riesgo sanitario",
+       subtitle = "Localidades humedal Río Maullín, CPV 2024",
+       x = "Nivel de riesgo", y = "N° de localidades") +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "none")
+```
+
+## 2.4 IVSP por localidad
+
+```{r tabla-ivsp}
+tabla_ivsp <- proc_data %>%
+  mutate(
+    `Fosa (%)`    = round(prop_fosa * 100, 1),
+    `Pozo (%)`    = round(prop_agua_pozo * 100, 1),
+    `Ad.may. (%)` = round(prop_adulto_mayor * 100, 1),
+    `Discap. (%)` = round(prop_discapacidad * 100, 1),
+    `IVSP alto`   = ifelse(ivsp_alto == 1, "Sí", "No")
+  ) %>%
+  select(Localidad = LOCALIDAD,
+         `Fosa (%)`, `Pozo (%)`, `Ad.may. (%)`, `Discap. (%)`,
+         `IVSP (0–100)` = ivsp, `IVSP alto`) %>%
+  arrange(desc(`IVSP (0–100)`))
+
+kable(tabla_ivsp,
+      caption = "Tabla 3. Índice de Vulnerabilidad Sanitaria Periurbana (IVSP) por localidad",
+      align = "lrrrrrr")
+```
+
+```{r fig-ivsp, fig.cap="Figura 2. IVSP por localidad. Mayor puntaje indica mayor vulnerabilidad.", fig.width=7, fig.height=4}
+ggplot(proc_data, aes(x = reorder(LOCALIDAD, ivsp), y = ivsp)) +
+  geom_bar(stat = "identity", fill = "#2C3E50", width = 0.6) +
+  geom_text(aes(label = round(ivsp, 0)), hjust = -0.2, size = 3) +
+  coord_flip(ylim = c(0, 115)) +
+  labs(title = "Índice de Vulnerabilidad Sanitaria Periurbana (IVSP)",
+       subtitle = "Escala 0–100 — Localidades humedal Río Maullín, CPV 2024",
+       x = NULL, y = "Puntaje IVSP") +
+  theme_minimal(base_size = 11) +
+  theme(panel.grid.major.y = element_blank())
+```
+
+El Habal obtiene el puntaje máximo (100,0), concentrando el mayor déficit de fosa séptica y la mayor proporción de adultos mayores. Le siguen Cariquilda y Misquihué. Coyam obtiene el mínimo (0,0) por efecto de la normalización min-max, aunque presenta igualmente déficit de saneamiento.
+
+---
+
+# 3. Análisis bivariado
+
+Para analizar el grado de asociación entre las variables de vulnerabilidad sanitaria se construyó una matriz de correlaciones de Pearson. Los valores oscilan entre −1 y 1: cercanos a 1 indican asociación positiva fuerte, cercanos a −1 negativa fuerte, y cercanos a 0 ausencia de relación lineal.
+
+```{r tabla-correlaciones}
+vars_cor <- proc_data %>%
+  select(
+    `Fosa séptica` = prop_fosa,
+    `Agua pozo`    = prop_agua_pozo,
+    `Adultos may.` = prop_adulto_mayor,
+    `Discapacidad` = prop_discapacidad,
+    `Mediagua`     = prop_mediagua
+  )
+
+mat_cor <- round(cor(vars_cor, use = "complete.obs"), 3)
+
+kable(mat_cor,
+      caption = "Tabla 4. Matriz de correlaciones entre variables de vulnerabilidad sanitaria (Pearson, n = 9)")
+```
+
+```{r fig-corrplot, fig.cap="Figura 3. Matriz de correlaciones entre variables de vulnerabilidad sanitaria.", fig.width=6, fig.height=5}
+corrplot(cor(vars_cor, use = "complete.obs"),
+         method      = "color",
+         type        = "upper",
+         tl.col      = "black",
+         tl.cex      = 0.85,
+         addCoef.col = "black",
+         number.cex  = 0.8,
+         col         = colorRampPalette(c("#C0392B", "white", "#2C3E50"))(200),
+         mar         = c(0, 0, 1, 0))
+```
+
+Los resultados muestran que la asociación más fuerte es entre adultos mayores y discapacidad (r = 0,82), indicando que las localidades con mayor proporción de adultos mayores también concentran más personas con discapacidad. La fosa séptica presenta correlación positiva moderada con discapacidad (r = 0,59), sugiriendo que el déficit de saneamiento tiende a coincidir con mayor vulnerabilidad social. Por otro lado, fosa séptica y agua de pozo muestran correlación negativa (r = −0,39): las localidades con más fosas tienen menos dependencia del pozo, reflejando perfiles de déficit distintos.
+
+---
+
+# 4. Modelos de regresión lineal
+
+La cartografía presentada en la Figura 4 permite territorializar y justificar territorialmente los resultados del análisis estadístico. Las localidades clasificadas con vulnerabilidad alta (IVSP 45–100) — El Habal, Misquihué y Cariquilda — son precisamente las que concentran las mayores proporciones de fosa séptica y adultos mayores, variables que los modelos de regresión identifican como predictores del IVSP. La expresión espacial de esta diferenciación confirma que la vulnerabilidad sanitaria no se distribuye aleatoriamente en el territorio: existe un patrón geográfico coherente con la proximidad al cuerpo de agua del Santuario de la Naturaleza, lo que refuerza el argumento de @harvey2008 sobre la dimensión espacial de la desigualdad en el acceso a infraestructura básica. Es precisamente esta concentración territorial lo que justifica la selección de estas 9 localidades como unidad de análisis estadístico.
+
+```{r fig-mapa, fig.cap="Figura 4. Distribución territorial del IVSP en localidades periurbanas del Santuario de la Naturaleza Humedales del Río Maullín. Fuente: CPV 2024, INE Chile / SBAP. Elaboración propia.", out.width="100%"}
+knitr::include_graphics("output/mapa_ivsp.png")
+```
+
+Se estiman modelos de regresión lineal para evaluar en qué medida las variables de saneamiento y demografía predicen el nivel de vulnerabilidad sanitaria (IVSP). La variable dependiente es el **IVSP (0–100)**. Las variables independientes son: proporción de fosa séptica (razón), proporción de adultos mayores (razón) y proporción de agua de pozo (razón).
+
+**Hipótesis de regresión:**
+
+- H1: A mayor proporción de viviendas con fosa séptica, mayor IVSP.
+- H2: A mayor proporción de adultos mayores, mayor IVSP.
+- H3: A mayor proporción de agua de pozo, mayor IVSP.
+
+```{r modelos-lineales, results='asis'}
+# Modelos simples
+reg1 <- lm(ivsp ~ prop_fosa,         data = proc_data)
+reg2 <- lm(ivsp ~ prop_adulto_mayor, data = proc_data)
+reg3 <- lm(ivsp ~ prop_agua_pozo,    data = proc_data)
+
+# Modelo múltiple
+reg4 <- lm(ivsp ~ prop_fosa + prop_adulto_mayor + prop_agua_pozo, data = proc_data)
+
+htmlreg(list(reg1, reg2, reg3, reg4),
+        custom.model.names = c("Modelo 1", "Modelo 2", "Modelo 3", "Modelo 4 (múltiple)"),
+        custom.note = "*** p < 0.001; ** p < 0.01; * p < 0.05",
+        custom.coef.names = c("Intercepto",
+                              "Fosa séptica",
+                              "Adultos mayores",
+                              "Agua de pozo"),
+        caption = "Tabla 5. Modelos de regresión lineal — Variable dependiente: IVSP (0–100)",
+        caption.above = TRUE)
+```
+
+**Interpretación:** En el Modelo 1, por cada unidad que aumenta la proporción de viviendas con fosa séptica, el IVSP aumenta en promedio según el coeficiente estimado. El Modelo 4 incluye los tres predictores simultáneamente: permite observar el efecto de cada variable manteniendo las demás constantes, controlando así por la covariación entre predictores. El R² indica la proporción de la varianza del IVSP explicada por el modelo.
+
+## 4.1 Valores predichos
+
+```{r fig-predichos-fosa, fig.cap="Figura 5. Valores predichos del IVSP según proporción de fosa séptica (Modelo 4).", fig.width=6, fig.height=4}
+ggeffects::ggpredict(reg4, terms = "prop_fosa") %>%
+  ggplot(aes(x = x, y = predicted)) +
+  geom_smooth(method = "lm", se = FALSE, color = "#2C3E50") +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "#2C3E50") +
+  labs(title = "Valores predichos del IVSP",
+       subtitle = "Según proporción de fosa séptica, controlando por otras variables",
+       x = "Proporción fosa séptica", y = "IVSP predicho") +
+  theme_bw()
+```
+
+---
+
+# 5. Regresión logística
+
+Para explorar qué factores se asocian a que una localidad tenga vulnerabilidad alta, se estima una regresión logística binaria. La variable dependiente es **IVSP alto** (1 = IVSP igual o superior a la mediana del grupo; 0 = por debajo). Se incluyen tres variables independientes: proporción de fosa séptica, proporción de adultos mayores y proporción de agua de pozo.
+
+```{r modelos-logisticos, results='asis'}
+m0log <- glm(ivsp_alto ~ prop_fosa,
+             data = proc_data, family = "binomial")
+
+m1log <- glm(ivsp_alto ~ prop_fosa + prop_adulto_mayor,
+             data = proc_data, family = "binomial")
+
+m2log <- glm(ivsp_alto ~ prop_fosa + prop_adulto_mayor + prop_agua_pozo,
+             data = proc_data, family = "binomial")
+
+htmlreg(list(m0log, m1log, m2log),
+        custom.model.names = c("M1 (log odds)", "M2 (log odds)", "M3 (log odds)"),
+        digits = 3,
+        stars  = c(0.001, 0.01, 0.05, 0.1),
+        symbol = "†",
+        caption = "Tabla 6. Modelos de regresión logística — Variable dependiente: IVSP alto (0/1)",
+        caption.above = TRUE)
+```
+
+## 5.1 Odds ratios
+
+```{r odds-ratios, results='asis'}
+m0log_OR <- exp(coef(m0log))
+m1log_OR <- exp(coef(m1log))
+m2log_OR <- exp(coef(m2log))
+
+htmlreg(list(m0log, m1log, m2log),
+        override.coef       = list(m0log_OR, m1log_OR, m2log_OR),
+        custom.model.names  = c("M1 (OR)", "M2 (OR)", "M3 (OR)"),
+        digits = 3,
+        stars  = c(0.001, 0.01, 0.05, 0.1),
+        symbol = "†",
+        caption = "Tabla 7. Odds ratios — Variable dependiente: IVSP alto (0/1)",
+        caption.above = TRUE)
+```
+
+**Interpretación:** Los odds ratios indican cuántas veces más chances tiene una localidad de clasificarse como IVSP alto según cada predictor. Un OR > 1 indica asociación positiva con la probabilidad de vulnerabilidad alta; un OR < 1 indica asociación negativa.
+
+## 5.2 Pseudo R² (McFadden)
+
+```{r pseudo-r2, results='asis'}
+# Pseudo R2 McFadden: 1 - (logLik(modelo) / logLik(modelo nulo))
+m_null <- glm(ivsp_alto ~ 1, data = proc_data, family = "binomial")
+
+pseudo_r2 <- function(m) round(1 - (logLik(m) / logLik(m_null)), 3)
+
+m0log_R2 <- as.numeric(pseudo_r2(m0log))
+m1log_R2 <- as.numeric(pseudo_r2(m1log))
+m2log_R2 <- as.numeric(pseudo_r2(m2log))
+
+htmlreg(list(m0log, m1log, m2log),
+        custom.model.names = c("M1 (log odds)", "M2 (log odds)", "M3 (log odds)"),
+        custom.gof.rows    = list("Pseudo R2 (McFadden)" = c(m0log_R2, m1log_R2, m2log_R2)),
+        digits = 3,
+        stars  = c(0.001, 0.01, 0.05, 0.1),
+        symbol = "†",
+        caption = "Tabla 8. Modelos logísticos con Pseudo R² — Variable dependiente: IVSP alto (0/1)",
+        caption.above = TRUE)
+```
+
+## 5.3 Probabilidades predichas
+
+```{r fig-prob-fosa, fig.cap="Figura 6. Probabilidad predicha de IVSP alto según proporción de fosa séptica (M3).", fig.width=6, fig.height=4}
+ggeffects::ggpredict(m2log, terms = "prop_fosa") %>%
+  ggplot(aes(x = x, y = predicted)) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"),
+              se = FALSE, color = "#C0392B") +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.2, fill = "#C0392B") +
+  labs(title = "Probabilidad predicha de IVSP alto",
+       subtitle = "Según proporción de fosa séptica, controlando por otras variables",
+       x = "Proporción fosa séptica",
+       y = "Probabilidad predicha") +
+  scale_y_continuous(limits = c(0, 1),
+                     labels = scales::percent_format(accuracy = 1L)) +
+  theme_bw()
+```
+
+---
+
+# 6. Conclusiones
+
+El análisis confirma la hipótesis de trabajo: existe diferenciación espacial en los niveles de vulnerabilidad sanitaria entre las localidades periurbanas del humedal Río Maullín, y las dimensiones del déficit tienden a concentrarse en las mismas unidades territoriales.
+
+La matriz de correlaciones revela que adultos mayores y discapacidad presentan la asociación más fuerte (r = 0,82), mientras que fosa séptica y discapacidad muestran correlación positiva moderada (r = 0,59). Los modelos de regresión lineal permiten cuantificar el efecto de cada predictor sobre el IVSP, identificando la proporción de fosa séptica como el factor de mayor peso explicativo, coherente con los pesos teóricos del SIVUST [@mideso2020].
+
+La regresión logística muestra que las localidades con mayor proporción de fosa séptica y adultos mayores tienen más chances de clasificarse como vulnerabilidad alta. Este hallazgo es consistente con lo documentado por @rodriguez2019 para contextos periurbanos latinoamericanos, donde el déficit sanitario no es un fenómeno aislado sino parte de un perfil de precariedad acumulada.
+
+Las principales limitaciones son: (1) la pequeña n (9 localidades) limita la inferencia estadística y la significancia de los coeficientes; (2) el CPV 2024 no captura población en asentamientos informales no consolidados; (3) la ausencia de una capa SIG oficial del Santuario con caracterización ecológica impide calcular con precisión la exposición diferencial de cada localidad al cuerpo de agua — la cartografía producida en este trabajo constituye una aproximación a ese vacío.
+
+---
+
+# 7. Referencias

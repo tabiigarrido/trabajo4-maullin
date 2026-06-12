@@ -1,0 +1,182 @@
+{
+    "sources": [
+        {
+            "URL": "https://www.ine.gob.cl/estadisticas/sociales/censos-de-poblacion-y-vivienda",
+            "author": [
+                {
+                    "literal": "Instituto Nacional de Estadísticas"
+                }
+            ],
+            "id": "ine2024",
+            "issued": {
+                "date-parts": [
+                    [
+                        2024
+                    ]
+                ]
+            },
+            "publisher": "INE Chile",
+            "title": "Censo de población y vivienda 2024: Base de datos de localidades",
+            "title-short": "Censo de población y vivienda 2024",
+            "type": ""
+        },
+        {
+            "URL": "https://siedu.ine.cl",
+            "author": [
+                {
+                    "literal": "Ministerio de Desarrollo Social y Familia"
+                }
+            ],
+            "id": "mideso2020",
+            "issued": {
+                "date-parts": [
+                    [
+                        2020
+                    ]
+                ]
+            },
+            "publisher": "Ministerio de Desarrollo Social y Familia",
+            "publisher-place": "Santiago, Chile",
+            "title": "Sistema de indicadores y estándares de desarrollo urbano: Metodología SIVUST",
+            "title-short": "Sistema de indicadores y estándares de desarrollo urbano",
+            "type": "report"
+        },
+        {
+            "author": [
+                {
+                    "family": "Harvey",
+                    "given": "David"
+                }
+            ],
+            "container-title": "New Left Review",
+            "id": "harvey2008",
+            "issued": {
+                "date-parts": [
+                    [
+                        2008
+                    ]
+                ]
+            },
+            "page": "23-40",
+            "title": "The right to the city",
+            "type": "article-journal",
+            "volume": "53"
+        },
+        {
+            "author": [
+                {
+                    "family": "Lefebvre",
+                    "given": "Henri"
+                }
+            ],
+            "id": "lefebvre1968",
+            "issued": {
+                "date-parts": [
+                    [
+                        1968
+                    ]
+                ]
+            },
+            "publisher": "Anthropos",
+            "publisher-place": "París",
+            "title": "Le droit à la ville",
+            "type": "book"
+        },
+        {
+            "author": [
+                {
+                    "family": "Rodríguez Vignoli",
+                    "given": "Jorge"
+                },
+                {
+                    "family": "Busso",
+                    "given": "Gustavo"
+                }
+            ],
+            "container-title": "Revista CEPAL",
+            "id": "rodriguez2019",
+            "issued": {
+                "date-parts": [
+                    [
+                        2019
+                    ]
+                ]
+            },
+            "page": "37-57",
+            "title": "Migración interna y desarrollo en américa latina: Desigualdades territoriales y vulnerabilidad social",
+            "title-short": "Migración interna y desarrollo en américa latina",
+            "type": "article-journal",
+            "volume": "127"
+        },
+        {
+            "author": [
+                {
+                    "family": "Jiménez Díaz",
+                    "given": "José Francisco"
+                }
+            ],
+            "container-title": "Revista de Ciencias Sociales",
+            "id": "jimenez2014",
+            "issue": "4",
+            "issued": {
+                "date-parts": [
+                    [
+                        2014
+                    ]
+                ]
+            },
+            "page": "620-635",
+            "title": "Pobreza, exclusión social y privación: Sobre el concepto de vulnerabilidad territorial",
+            "title-short": "Pobreza, exclusión social y privación",
+            "type": "article-journal",
+            "volume": "20"
+        },
+        {
+            "author": [
+                {
+                    "family": "Peña",
+                    "given": "Marco A."
+                },
+                {
+                    "family": "Brenning",
+                    "given": "Alexander"
+                }
+            ],
+            "container-title": "Applied Geography",
+            "id": "pena2015",
+            "issued": {
+                "date-parts": [
+                    [
+                        2015
+                    ]
+                ]
+            },
+            "page": "58-68",
+            "title": "Evaluating the role of water access in the social vulnerability of rural communities: A spatial approach",
+            "title-short": "Evaluating the role of water access in the social vulnerability of rural communities",
+            "type": "article-journal",
+            "volume": "57"
+        },
+        {
+            "author": [
+                {
+                    "literal": "Ministerio de Salud de Chile"
+                }
+            ],
+            "id": "minsal2019",
+            "issued": {
+                "date-parts": [
+                    [
+                        2019
+                    ]
+                ]
+            },
+            "publisher": "MINSAL",
+            "publisher-place": "Santiago, Chile",
+            "title": "Informe de brechas de cobertura en salud rural: Agua y saneamiento básico",
+            "title-short": "Informe de brechas de cobertura en salud rural",
+            "type": "report"
+        }
+    ],
+    "project_biblios": []
+}
